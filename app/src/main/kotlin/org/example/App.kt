@@ -87,7 +87,9 @@ class Input(panel: JPanel) : Vec2() {
                         "left" to listOf(KeyEvent.VK_LEFT, KeyEvent.VK_A),
                         "right" to listOf(KeyEvent.VK_RIGHT, KeyEvent.VK_D),
                         "escape" to listOf(KeyEvent.VK_ESCAPE),
-                        "space" to listOf(KeyEvent.VK_SPACE)
+                        "space" to listOf(KeyEvent.VK_SPACE),
+                        "inc" to listOf(KeyEvent.VK_E),
+                        "dec" to listOf(KeyEvent.VK_Q),
                 )
 
         inputs.forEach { (event, codes) ->
@@ -99,51 +101,28 @@ class Input(panel: JPanel) : Vec2() {
 }
 
 class Game : JPanel() {
-    var player = Player()
-
-    var rotX = Vec2(0.0, 0.0)
-    var rotY = Vec2(0.0, 0.0)
-    var rotS = Vec2(0.0, 0.0)
-
-    var curr = 0
+    val player = Player()
 
     val input = Input(this)
-    val speed = 5
+    val speed = 0.15
 
     val gameLoop = Timer(10, { update() })
+    var tileSize = 50
 
-    val tileSize = 20 * 5
-    val tileMap =
-            arrayOf(
-                    intArrayOf(0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
-                    intArrayOf(0, 1, 0, 0, 0, 1, 1, 0, 0, 0),
-                    intArrayOf(0, 1, 0, 0, 0, 1, 0, 1, 0, 0),
-                    intArrayOf(0, 1, 0, 0, 0, 1, 1, 0, 0, 0),
-                    intArrayOf(0, 1, 1, 1, 0, 1, 0, 1, 0, 0),
-                    intArrayOf(0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
-                    intArrayOf(0, 1, 0, 0, 0, 1, 1, 0, 0, 0),
-                    intArrayOf(0, 1, 0, 0, 0, 1, 0, 1, 0, 0),
-                    intArrayOf(0, 1, 0, 0, 0, 1, 1, 0, 0, 0),
-                    intArrayOf(0, 1, 1, 1, 0, 1, 0, 1, 0, 0),
-                    intArrayOf(0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
-            )
+    var offset = Vec2(0.0, 0.0)
+
+    enum class Mode {
+        Isometric,
+        Topdown
+    }
+
+    var mode = Mode.Isometric
 
     fun update() {
         player.velocity = Vec2(0.0, 0.0)
 
         if (input.isPressed("escape")) {
             System.exit(0)
-        }
-
-        if (input.isReleased("space")) {
-            println(
-                    when (curr++ % 3) {
-                        0 -> rotX
-                        1 -> rotY
-                        2 -> rotS
-                        else -> throw Exception("Unexpected")
-                    }
-            )
         }
 
         if (input.isPressed("up")) {
@@ -162,15 +141,21 @@ class Game : JPanel() {
             player.velocity.x += speed
         }
 
-        val amount = player.velocity * 0.01
-        when (curr % 3) {
-            0 -> rotX += amount
-            1 -> rotY -= amount
-            2 -> rotS += amount
+        if (input.isPressed("inc")) {
+            tileSize++
+        } else if (input.isPressed("dec")) {
+            tileSize--
         }
 
-        player.position += player.velocity
+        if (input.isReleased("space")) {
+            mode = when (mode) {
+                Mode.Isometric -> Mode.Topdown
+                Mode.Topdown -> Mode.Isometric
+            }
+        }
 
+        offset += player.velocity
+        player.position += player.velocity
         player.position.x = player.x.coerceIn(0.0, WIN_WIDTH - 20.0)
         player.position.y = player.y.coerceIn(0.0, WIN_HEIGHT - 20.0)
 
@@ -181,24 +166,40 @@ class Game : JPanel() {
         super.paintComponent(g)
         val colors = listOf(Color.RED, Color.GREEN, Color.BLUE, Color.MAGENTA)
 
-        for (y in 0..WIN_HEIGHT / tileSize) {
-            for (x in 0..WIN_WIDTH / tileSize) {
-                val sx = tileSize * (rotS.x + 1.0)
-                val sy = tileSize * (rotS.y + 1.0)
+        val h = 10
+        val w = 10
+        for (y in 0 until h) {
+            for (x in 0 until w) {
+                val sx = tileSize
+                val sy = tileSize
 
-                val xs = (x * sx).toDouble()
-                val ys = (y * sy).toDouble()
+                val isIso = if (mode == Mode.Isometric) 1.0 else 0.0
 
-                val org = Vec2(xs, ys)
+                val vx = x + (h - y) * isIso + offset.x
+                val vy = y + (x * 0.5 - y * 0.5 ) * isIso + offset.y
 
-                val xT = Vec2(xs + sx * rotX.x, ys + sy * rotX.y)
-                val yT = Vec2(xs - sx * rotY.x, ys + sy * rotY.y)
+                val x1 = vx * sx
+                val x2 = vx * sx + sx
+                val x3 = x2 - sx * isIso
+                val x4 = x1 - sx * isIso
 
-                g?.color = colors[curr % colors.size]
-                g?.drawLine(org.x.toInt(), org.y.toInt(), xT.x.toInt(), xT.y.toInt())
-                g?.drawLine(org.x.toInt(), org.y.toInt(), yT.x.toInt(), yT.y.toInt())
+                val y1 = vy * sy
+                val y2 = y1 + sy * 0.5 * isIso
+                val y3 = y1 + sy + sy * 0.1 * isIso
+                val y4 = y1 + sy - sy * 0.5 * isIso
+
+                val xs = intArrayOf(x1.toInt(), x2.toInt(), x3.toInt(), x4.toInt())
+                val ys = intArrayOf(y1.toInt(), y2.toInt(), y3.toInt(), y4.toInt())
+
+                val tile = Polygon(xs, ys, xs.size)
+
+                g?.color = colors[x % colors.size]
+                g?.drawPolygon(tile)
             }
         }
+
+        g?.color = Color.WHITE
+        g?.drawString(mode.toString(), 50, 50)
     }
 
     init {
