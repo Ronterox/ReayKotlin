@@ -2,6 +2,7 @@ package org.example
 
 import java.awt.*
 import java.awt.event.*
+import java.io.ObjectInputStream
 import javax.swing.*
 
 const val WIN_WIDTH = 800
@@ -34,9 +35,26 @@ class Player(var position: Vec2 = Vec2(.0, .0), var velocity: Vec2 = Vec2(.0, .0
         get() = position.x
     val y: Double
         get() = position.y
+    val vertices = arrayListOf<Polygon>()
+
+    init {
+        val filepath = "player.obj"
+        val file = javaClass.classLoader.getResourceAsStream(filepath)
+
+        if (file == null) {
+            println("File not found $filepath!")
+            System.exit(0)
+        }
+
+        ObjectInputStream(file).readObject().let {
+            if (it is List<*>) {
+                it.forEach { vertices.add(it as Polygon) }
+            }
+        }
+    }
 }
 
-class Input(panel: JPanel) : Vec2() {
+class Input(panel: JPanel, inputs: Map<String, List<Int>>) : Vec2() {
     enum class InputState {
         None,
         Pressed,
@@ -80,18 +98,6 @@ class Input(panel: JPanel) : Vec2() {
             )
         }
 
-        val inputs =
-                mapOf(
-                        "up" to listOf(KeyEvent.VK_UP, KeyEvent.VK_W),
-                        "down" to listOf(KeyEvent.VK_DOWN, KeyEvent.VK_S),
-                        "left" to listOf(KeyEvent.VK_LEFT, KeyEvent.VK_A),
-                        "right" to listOf(KeyEvent.VK_RIGHT, KeyEvent.VK_D),
-                        "escape" to listOf(KeyEvent.VK_ESCAPE),
-                        "space" to listOf(KeyEvent.VK_SPACE),
-                        "inc" to listOf(KeyEvent.VK_E),
-                        "dec" to listOf(KeyEvent.VK_Q),
-                )
-
         inputs.forEach { (event, codes) ->
             codes.forEach { code -> set_input(code, event) }
             set_action(press(event), { mappedInput[event] = InputState.Pressed })
@@ -101,14 +107,25 @@ class Input(panel: JPanel) : Vec2() {
 }
 
 class Game : JPanel() {
+    val gameLoop = Timer(1000 / 60, { update() })
+    val input =
+            Input(
+                    this,
+                    mapOf(
+                            "up" to listOf(KeyEvent.VK_UP, KeyEvent.VK_W),
+                            "down" to listOf(KeyEvent.VK_DOWN, KeyEvent.VK_S),
+                            "left" to listOf(KeyEvent.VK_LEFT, KeyEvent.VK_A),
+                            "right" to listOf(KeyEvent.VK_RIGHT, KeyEvent.VK_D),
+                            "escape" to listOf(KeyEvent.VK_ESCAPE),
+                            "space" to listOf(KeyEvent.VK_SPACE),
+                            "inc" to listOf(KeyEvent.VK_E),
+                            "dec" to listOf(KeyEvent.VK_Q),
+                    )
+            )
     val player = Player()
-
-    val input = Input(this)
     val speed = 0.15
 
-    val gameLoop = Timer(10, { update() })
     var tileSize = 50
-
     var offset = Vec2(0.0, 0.0)
 
     enum class Mode {
@@ -148,10 +165,11 @@ class Game : JPanel() {
         }
 
         if (input.isReleased("space")) {
-            mode = when (mode) {
-                Mode.Isometric -> Mode.Topdown
-                Mode.Topdown -> Mode.Isometric
-            }
+            mode =
+                    when (mode) {
+                        Mode.Isometric -> Mode.Topdown
+                        Mode.Topdown -> Mode.Isometric
+                    }
         }
 
         offset += player.velocity
@@ -162,9 +180,10 @@ class Game : JPanel() {
         repaint()
     }
 
-    override fun paintComponent(g: Graphics?) {
+    override fun paintComponent(g: Graphics) {
         super.paintComponent(g)
         val colors = listOf(Color.RED, Color.GREEN, Color.BLUE, Color.MAGENTA)
+        val isIso = if (mode == Mode.Isometric) 1.0 else 0.0
 
         val h = 10
         val w = 10
@@ -173,33 +192,37 @@ class Game : JPanel() {
                 val sx = tileSize
                 val sy = tileSize
 
-                val isIso = if (mode == Mode.Isometric) 1.0 else 0.0
-
                 val vx = x + (h - y) * isIso + offset.x
-                val vy = y + (x * 0.5 - y * 0.5 ) * isIso + offset.y
+                val vy = y + (x * 0.5 - y * 0.5) * isIso + offset.y
 
                 val x1 = vx * sx
                 val x2 = vx * sx + sx
-                val x3 = x2 - sx * isIso
-                val x4 = x1 - sx * isIso
+                val x3 = x2 - (sx * isIso)
+                val x4 = x1 - (sx * isIso)
 
                 val y1 = vy * sy
-                val y2 = y1 + sy * 0.5 * isIso
-                val y3 = y1 + sy + sy * 0.1 * isIso
-                val y4 = y1 + sy - sy * 0.5 * isIso
+                val y2 = y1 + (sy * 0.5 * isIso)
+                val y3 = y1 + sy + (sy * 0.1 * isIso)
+                val y4 = y1 + sy - (sy * 0.5 * isIso)
 
                 val xs = intArrayOf(x1.toInt(), x2.toInt(), x3.toInt(), x4.toInt())
                 val ys = intArrayOf(y1.toInt(), y2.toInt(), y3.toInt(), y4.toInt())
 
                 val tile = Polygon(xs, ys, xs.size)
 
-                g?.color = colors[x % colors.size]
-                g?.drawPolygon(tile)
+                g.color = colors[x % colors.size]
+                g.fillPolygon(tile)
             }
         }
 
-        g?.color = Color.WHITE
-        g?.drawString(mode.toString(), 50, 50)
+        g.color = Color.WHITE
+        g.drawString(mode.toString(), 50, 50)
+
+        g.color = Color.WHITE
+        player.vertices.forEach {
+            // TODO: Increment X and Y for player to move
+            g.fillPolygon(it)
+        }
     }
 
     init {

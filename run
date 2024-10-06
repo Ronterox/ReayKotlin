@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+
+if [ -z "$1" ]; then
+    echo "usage: run <className>"
+    exit 1
+fi
+
+gradle run -PmainClass=org.example.$1Kt
