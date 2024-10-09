@@ -80,7 +80,7 @@ class Designer : JPanel() {
             curr = Polygon()
         }
         saveButton.addActionListener {
-            val fileDialog = JFileChooser("./")
+            val fileDialog = JFileChooser("./src/main/resources")
             // TODO: Save in a way so that the first point is at point (0,0)
             if (fileDialog.showDialog(this, "Save") == JFileChooser.APPROVE_OPTION) {
                 ObjectOutputStream(fileDialog.selectedFile.outputStream()).use {

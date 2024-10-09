@@ -124,16 +124,17 @@ class Game : JPanel() {
             )
     val player = Player()
     val speed = 0.15
+    val modes = listOf(Mode.Isometric, Mode.Topdown, Mode.ThirdPerson)
 
     var tileSize = 50
     var offset = Vec2(0.0, 0.0)
+    var modeIndex = 2
 
     enum class Mode {
         Isometric,
-        Topdown
+        Topdown,
+        ThirdPerson
     }
-
-    var mode = Mode.Isometric
 
     fun update() {
         player.velocity = Vec2(0.0, 0.0)
@@ -165,11 +166,7 @@ class Game : JPanel() {
         }
 
         if (input.isReleased("space")) {
-            mode =
-                    when (mode) {
-                        Mode.Isometric -> Mode.Topdown
-                        Mode.Topdown -> Mode.Isometric
-                    }
+            modeIndex = (modeIndex + 1) % modes.size
         }
 
         offset += player.velocity
@@ -183,7 +180,8 @@ class Game : JPanel() {
     override fun paintComponent(g: Graphics) {
         super.paintComponent(g)
         val colors = listOf(Color.RED, Color.GREEN, Color.BLUE, Color.MAGENTA)
-        val isIso = if (mode == Mode.Isometric) 1.0 else 0.0
+        val isIso = if (modes[modeIndex] == Mode.Isometric) 1.0 else 0.0
+        val isThird = if (modes[modeIndex] == Mode.ThirdPerson) 1.0 else 0.0
 
         val h = 10
         val w = 10
@@ -192,13 +190,13 @@ class Game : JPanel() {
                 val sx = tileSize
                 val sy = tileSize
 
-                val vx = x + (h - y) * isIso + offset.x
+                val vx = x + (h - y) * isIso + x * 2 * isThird + offset.x
                 val vy = y + (x * 0.5 - y * 0.5) * isIso + offset.y
 
-                val x1 = vx * sx
-                val x2 = vx * sx + sx
-                val x3 = x2 - (sx * isIso)
-                val x4 = x1 - (sx * isIso)
+                val x1 = vx * sx - (sx * y * isThird)
+                val x2 = vx * sx + sx + (sx * y * isThird)
+                val x3 = x2 - (sx * isIso) + (sx * y * isThird)
+                val x4 = x1 - (sx * isIso) - (sx * y * isThird)
 
                 val y1 = vy * sy
                 val y2 = y1 + (sy * 0.5 * isIso)
@@ -212,11 +210,12 @@ class Game : JPanel() {
 
                 g.color = colors[x % colors.size]
                 g.fillPolygon(tile)
+                // g.drawPolygon(tile)
             }
         }
 
         g.color = Color.WHITE
-        g.drawString(mode.toString(), 50, 50)
+        g.drawString(modes[modeIndex].toString(), 50, 50)
 
         g.color = Color.WHITE
         player.vertices.forEach {
