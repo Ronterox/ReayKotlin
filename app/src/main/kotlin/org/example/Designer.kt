@@ -15,7 +15,7 @@ class Designer : JPanel() {
                     mapOf(
                             "escape" to listOf(KeyEvent.VK_ESCAPE),
                             "space" to listOf(KeyEvent.VK_SPACE),
-                            "enter" to listOf(KeyEvent.VK_ENTER),
+                            "delete" to listOf(KeyEvent.VK_Q),
                     )
             )
 
@@ -29,13 +29,13 @@ class Designer : JPanel() {
             System.exit(0)
         }
 
-        if (input.isReleased("space")) {
-            verticesTotal -= curr.npoints
+        if (input.isReleased("space") && curr.npoints > 0) {
+            figures.add(curr)
             curr = Polygon()
         }
 
-        if (input.isReleased("enter") && curr.npoints > 0) {
-            figures.add(curr)
+        if (input.isPressed("delete")) {
+            verticesTotal -= curr.npoints
             curr = Polygon()
         }
 

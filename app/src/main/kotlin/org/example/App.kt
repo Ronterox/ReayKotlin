@@ -35,10 +35,11 @@ class Player(var position: Vec2 = Vec2(.0, .0), var velocity: Vec2 = Vec2(.0, .0
         get() = position.x
     val y: Double
         get() = position.y
-    val vertices = arrayListOf<Polygon>()
+    val verticesIso = arrayListOf<Polygon>()
+    val verticesThird = arrayListOf<Polygon>()
+    val verticesTop = arrayListOf<Polygon>()
 
-    init {
-        val filepath = "player.obj"
+    fun loadSprite(filepath: String, vertices: ArrayList<Polygon>) {
         val file = javaClass.classLoader.getResourceAsStream(filepath)
 
         if (file == null) {
@@ -51,6 +52,12 @@ class Player(var position: Vec2 = Vec2(.0, .0), var velocity: Vec2 = Vec2(.0, .0
                 it.forEach { vertices.add(it as Polygon) }
             }
         }
+    }
+
+    init {
+        loadSprite("player_iso.obj", verticesIso)
+        loadSprite("player_third.obj", verticesThird)
+        loadSprite("player_top.obj", verticesTop)
     }
 }
 
@@ -217,8 +224,14 @@ class Game : JPanel() {
         g.color = Color.WHITE
         g.drawString(modes[modeIndex].toString(), 50, 50)
 
+        val playerSprite = when (modes[modeIndex]) {
+            Mode.Isometric -> player.verticesIso
+            Mode.Topdown -> player.verticesTop
+            Mode.ThirdPerson -> player.verticesThird
+        }
+
         g.color = Color.WHITE
-        player.vertices.forEach {
+        playerSprite.forEach {
             // TODO: Increment X and Y for player to move
             g.fillPolygon(it)
         }
