@@ -131,11 +131,13 @@ class Game : JPanel() {
             )
     val player = Player()
     val speed = 0.15
-    val modes = listOf(Mode.Isometric, Mode.Topdown, Mode.ThirdPerson)
+    val modes = listOf(Mode.Topdown, Mode.Isometric, Mode.ThirdPerson)
 
     var tileSize = 50
     var offset = Vec2(0.0, 0.0)
+
     var modeIndex = 2
+    var inc = 1
 
     enum class Mode {
         Isometric,
@@ -173,7 +175,8 @@ class Game : JPanel() {
         }
 
         if (input.isReleased("space")) {
-            modeIndex = (modeIndex + 1) % modes.size
+            inc = inc * -1 * (if (modeIndex == 0 || modeIndex == 2) 1 else -1)
+            modeIndex += inc
         }
 
         offset += player.velocity
