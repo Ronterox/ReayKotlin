@@ -130,12 +130,10 @@ class Game : JPanel() {
                     )
             )
     val player = Player()
-    val speed = 0.15
     val modes = listOf(Mode.Topdown, Mode.Isometric, Mode.ThirdPerson)
+    val speed = 1
 
     var tileSize = 50
-    var offset = Vec2(0.0, 0.0)
-
     var modeIndex = 2
     var inc = 1
 
@@ -179,7 +177,6 @@ class Game : JPanel() {
             modeIndex += inc
         }
 
-        offset += player.velocity
         player.position += player.velocity
         player.position.x = player.x.coerceIn(0.0, WIN_WIDTH - 20.0)
         player.position.y = player.y.coerceIn(0.0, WIN_HEIGHT - 20.0)
@@ -200,8 +197,8 @@ class Game : JPanel() {
                 val sx = tileSize
                 val sy = tileSize
 
-                val vx = x + (h - y) * isIso + x * 2 * isThird + offset.x
-                val vy = y + (x * 0.5 - y * 0.5) * isIso + offset.y
+                val vx = x + (h - y) * isIso + x * 2 * isThird
+                val vy = y + (x * 0.5 - y * 0.5) * isIso
 
                 val x1 = vx * sx - (sx * y * isThird)
                 val x2 = vx * sx + sx + (sx * y * isThird)
@@ -227,16 +224,19 @@ class Game : JPanel() {
         g.color = Color.WHITE
         g.drawString(modes[modeIndex].toString(), 50, 50)
 
-        val playerSprite = when (modes[modeIndex]) {
-            Mode.Isometric -> player.verticesIso
-            Mode.Topdown -> player.verticesTop
-            Mode.ThirdPerson -> player.verticesThird
-        }
+        arrayOf(player.verticesIso, player.verticesTop, player.verticesThird).forEachIndexed {
+                index,
+                sprite ->
+            sprite.forEach {
+                (0 until it.npoints).forEach { i ->
+                    it.xpoints[i] += player.velocity.x.toInt()
+                    it.ypoints[i] += player.velocity.y.toInt()
+                }
 
-        g.color = Color.WHITE
-        playerSprite.forEach {
-            // TODO: Increment X and Y for player to move
-            g.fillPolygon(it)
+                if (index == modeIndex) {
+                    g.fillPolygon(it)
+                }
+            }
         }
     }
 
