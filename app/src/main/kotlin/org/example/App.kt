@@ -200,8 +200,12 @@ class Game : JPanel(), Runnable {
     }
 
     fun rotate_xz(vec: Vec3, angle: Double) {
-        vec.x = vec.x * cos(angle) - vec.z * sin(angle)
-        vec.z = vec.x * sin(angle) + vec.z * cos(angle)
+        val (x, _, z) = vec
+        val c = cos(angle)
+        val s = sin(angle)
+
+        vec.x = x * c - z * s
+        vec.z = x * s + z * c
     }
 
     override fun paintComponent(g: Graphics) {
