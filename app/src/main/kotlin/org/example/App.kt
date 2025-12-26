@@ -2,66 +2,13 @@ package org.example
 
 import java.awt.*
 import java.awt.event.*
-import java.io.ObjectInputStream
 import javax.swing.*
 
 const val WIN_WIDTH = 800
 const val WIN_HEIGHT = 600
+const val TARGET_FPS = 60
 
-open class Vec2(var x: Double = .0, var y: Double = .0) {
-    override fun toString(): String {
-        return "($x, $y)"
-    }
-}
-
-operator fun Vec2.plus(other: Vec2): Vec2 {
-    return Vec2(x + other.x, y + other.y)
-}
-
-operator fun Vec2.minus(other: Vec2): Vec2 {
-    return Vec2(x - other.x, y - other.y)
-}
-
-operator fun Vec2.times(other: Double): Vec2 {
-    return Vec2(x * other, y * other)
-}
-
-operator fun Vec2.times(other: Vec2): Vec2 {
-    return Vec2(x * other.x, y * other.y)
-}
-
-class Player(var position: Vec2 = Vec2(.0, .0), var velocity: Vec2 = Vec2(.0, .0)) {
-    val x: Double
-        get() = position.x
-    val y: Double
-        get() = position.y
-    val verticesIso = arrayListOf<Polygon>()
-    val verticesThird = arrayListOf<Polygon>()
-    val verticesTop = arrayListOf<Polygon>()
-
-    fun loadSprite(filepath: String, vertices: ArrayList<Polygon>) {
-        val file = javaClass.classLoader.getResourceAsStream(filepath)
-
-        if (file == null) {
-            println("File not found $filepath!")
-            System.exit(0)
-        }
-
-        ObjectInputStream(file).readObject().let {
-            if (it is List<*>) {
-                it.forEach { vertices.add(it as Polygon) }
-            }
-        }
-    }
-
-    init {
-        loadSprite("player_iso.obj", verticesIso)
-        loadSprite("player_third.obj", verticesThird)
-        loadSprite("player_top.obj", verticesTop)
-    }
-}
-
-class Input(panel: JPanel, inputs: Map<String, List<Int>>) : Vec2() {
+class Input(panel: JPanel, inputs: Map<String, List<Int>>) {
     enum class InputState {
         None,
         Pressed,
@@ -114,7 +61,7 @@ class Input(panel: JPanel, inputs: Map<String, List<Int>>) : Vec2() {
 }
 
 class Game : JPanel() {
-    val gameLoop = Timer(1000 / 60, { update() })
+    val gameLoop = Timer(1000 / TARGET_FPS, { update() })
     val input =
             Input(
                     this,
@@ -125,124 +72,43 @@ class Game : JPanel() {
                             "right" to listOf(KeyEvent.VK_RIGHT, KeyEvent.VK_D),
                             "escape" to listOf(KeyEvent.VK_ESCAPE),
                             "space" to listOf(KeyEvent.VK_SPACE),
-                            "inc" to listOf(KeyEvent.VK_E),
-                            "dec" to listOf(KeyEvent.VK_Q),
                     )
             )
-    val player = Player()
-    val modes = listOf(Mode.Topdown, Mode.Isometric, Mode.ThirdPerson)
-    val speed = 1
-
-    var tileSize = 50
-    var modeIndex = 2
-    var inc = 1
-
-    enum class Mode {
-        Isometric,
-        Topdown,
-        ThirdPerson
-    }
 
     fun update() {
-        player.velocity = Vec2(0.0, 0.0)
-
         if (input.isPressed("escape")) {
             System.exit(0)
         }
 
         if (input.isPressed("up")) {
-            player.velocity.y -= speed
+            println("up")
         }
 
         if (input.isPressed("down")) {
-            player.velocity.y += speed
+            println("down")
         }
 
         if (input.isPressed("left")) {
-            player.velocity.x -= speed
+            println("left")
         }
 
         if (input.isPressed("right")) {
-            player.velocity.x += speed
+            println("right")
         }
 
-        if (input.isPressed("inc")) {
-            tileSize++
-        } else if (input.isPressed("dec")) {
-            tileSize--
+        if (input.isPressed("space")) {
+            println("space")
         }
-
-        if (input.isReleased("space")) {
-            inc = inc * -1 * (if (modeIndex == 0 || modeIndex == 2) 1 else -1)
-            modeIndex += inc
-        }
-
-        player.position += player.velocity
-        player.position.x = player.x.coerceIn(0.0, WIN_WIDTH - 20.0)
-        player.position.y = player.y.coerceIn(0.0, WIN_HEIGHT - 20.0)
 
         repaint()
     }
 
     override fun paintComponent(g: Graphics) {
         super.paintComponent(g)
-        val colors = listOf(Color.RED, Color.GREEN, Color.BLUE, Color.MAGENTA)
-        val isIso = if (modes[modeIndex] == Mode.Isometric) 1.0 else 0.0
-        val isThird = if (modes[modeIndex] == Mode.ThirdPerson) 1.0 else 0.0
-
-        val h = 10
-        val w = 10
-        for (y in 0 until h) {
-            for (x in 0 until w) {
-                val sx = tileSize
-                val sy = tileSize
-
-                val vx = x + (h - y) * isIso + x * 2 * isThird
-                val vy = y + (x * 0.5 - y * 0.5) * isIso
-
-                val x1 = vx * sx - (sx * y * isThird)
-                val x2 = vx * sx + sx + (sx * y * isThird)
-                val x3 = x2 - (sx * isIso) + (sx * y * isThird)
-                val x4 = x1 - (sx * isIso) - (sx * y * isThird)
-
-                val y1 = vy * sy
-                val y2 = y1 + (sy * 0.5 * isIso)
-                val y3 = y1 + sy + (sy * 0.1 * isIso)
-                val y4 = y1 + sy - (sy * 0.5 * isIso)
-
-                val xs = intArrayOf(x1.toInt(), x2.toInt(), x3.toInt(), x4.toInt())
-                val ys = intArrayOf(y1.toInt(), y2.toInt(), y3.toInt(), y4.toInt())
-
-                val tile = Polygon(xs, ys, xs.size)
-
-                g.color = colors[x % colors.size]
-                g.fillPolygon(tile)
-                // g.drawPolygon(tile)
-            }
-        }
-
-        g.color = Color.WHITE
-        g.drawString(modes[modeIndex].toString(), 50, 50)
-
-        arrayOf(player.verticesIso, player.verticesTop, player.verticesThird).forEachIndexed {
-                index,
-                sprite ->
-            sprite.forEach {
-                (0 until it.npoints).forEach { i ->
-                    it.xpoints[i] += player.velocity.x.toInt()
-                    it.ypoints[i] += player.velocity.y.toInt()
-                }
-
-                if (index == modeIndex) {
-                    g.fillPolygon(it)
-                }
-            }
-        }
     }
 
     init {
         this.background = Color.BLACK
-        player.position += Vec2(WIN_WIDTH / 2.0, WIN_HEIGHT / 2.0)
         gameLoop.start()
     }
 }

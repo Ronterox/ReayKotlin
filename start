@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+
+set -e
+
+main() {
+	app
+}
+
+# @cmd Compiles and runs the application
+app() {
+	./run App
+}
+
+# @cmd Runs the designer UI
+designer() {
+	./run Designer
+}
+
+# See more details at https://github.com/sigoden/argc
+eval "$(start-tool extend)"
+eval "$(argc --argc-eval "$0" "$@")"
