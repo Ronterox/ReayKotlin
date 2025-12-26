@@ -112,7 +112,7 @@ class Game : JPanel(), Runnable {
                     listOf(3, 7),
             )
 
-    var zOffset = 1.0
+    var offset = Vec3(0.0, 0.0, 0.0)
     var angle = 0.0
 
     var dt = 0.0
@@ -140,31 +140,28 @@ class Game : JPanel(), Runnable {
     }
 
     fun update() {
-        zOffset += dt * 0.001
-        angle += PI * dt * 0.001
-
         if (input.isPressed("escape")) {
             System.exit(0)
         }
 
         if (input.isPressed("up")) {
-            println("up")
+            offset.z += dt * 0.01
         }
 
         if (input.isPressed("down")) {
-            println("down")
+            offset.z -= dt * 0.01
         }
 
         if (input.isPressed("left")) {
-            println("left")
+            offset.x -= dt * 0.01
         }
 
         if (input.isPressed("right")) {
-            println("right")
+            offset.x += dt * 0.01
         }
 
         if (input.isPressed("space")) {
-            println("space")
+            angle += PI * dt * 0.01
         }
     }
 
@@ -196,10 +193,10 @@ class Game : JPanel(), Runnable {
         out.y = (1 - (vec.y + 1) / 2.0) * WIN_HEIGHT
     }
 
-    fun project(vec: Vec3, distance: Double) {
-        val z = vec.z + distance
-        vec.x = vec.x / z
-        vec.y = vec.y / z
+    fun project(vec: Vec3, offset: Vec3) {
+        val z = vec.z + offset.z
+        vec.x = vec.x / z + offset.x
+        vec.y = vec.y / z + offset.y
     }
 
     fun rotate_xz(vec: Vec3, angle: Double) {
@@ -224,7 +221,7 @@ class Game : JPanel(), Runnable {
                 inp1.z = v1.z
 
                 rotate_xz(inp1, angle)
-                project(inp1, zOffset)
+                project(inp1, offset)
                 screen(inp1, out1)
 
                 // point(g, out1)
@@ -235,7 +232,7 @@ class Game : JPanel(), Runnable {
                 inp2.z = v2.z
 
                 rotate_xz(inp2, angle)
-                project(inp2, zOffset)
+                project(inp2, offset)
                 screen(inp2, out2)
 
                 line(g, out1, out2)
