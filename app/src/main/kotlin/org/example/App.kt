@@ -140,7 +140,7 @@ class Game : JPanel(), Runnable {
     }
 
     fun update() {
-        zOffset += dt * 0.0
+        zOffset += dt * 0.001
         angle += PI * dt * 0.001
 
         if (input.isPressed("escape")) {
@@ -178,23 +178,22 @@ class Game : JPanel(), Runnable {
     }
 
     fun line(g: Graphics, v1: Vec2, v2: Vec2) {
-        val SIZE = 10
-        val HSIZE = SIZE / 2
+        val SIZE = 10.0
+        val HSIZE = SIZE / 2.0
         val COLOR = Color.GREEN
 
         g.color = COLOR
         g.drawLine(
-                v1.x.toInt() - HSIZE,
-                v1.y.toInt() - HSIZE,
-                v2.x.toInt() - HSIZE,
-                v2.y.toInt() - HSIZE
+                (v1.x - HSIZE).roundToInt(),
+                (v1.y - HSIZE).roundToInt(),
+                (v2.x - HSIZE).roundToInt(),
+                (v2.y - HSIZE).roundToInt(),
         )
     }
 
     fun screen(vec: Vec3, out: Vec2) {
-        // Optimize like the video
-        out.x = vec.x * WIN_WIDTH / 2.0 + WIN_WIDTH / 2.0
-        out.y = vec.y * -1.0 * WIN_HEIGHT / 2.0 + WIN_HEIGHT / 2.0
+        out.x = (vec.x + 1) / 2.0 * WIN_WIDTH
+        out.y = (1 - (vec.y + 1) / 2.0) * WIN_HEIGHT
     }
 
     fun project(vec: Vec3, distance: Double) {
