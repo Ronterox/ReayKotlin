@@ -2,10 +2,24 @@ package org.example
 
 import java.awt.*
 import java.awt.event.*
+import java.lang.System
 import javax.swing.*
+import kotlin.math.*
+
+data class Vec2(var x: Double = .0, var y: Double = .0) {
+    override fun toString(): String {
+        return "($x, $y)"
+    }
+}
+
+data class Vec3(var x: Double = .0, var y: Double = .0, var z: Double = .0) {
+    override fun toString(): String {
+        return "($x, $y, $z)"
+    }
+}
 
 const val WIN_WIDTH = 800
-const val WIN_HEIGHT = 600
+const val WIN_HEIGHT = 800
 const val TARGET_FPS = 60
 
 class Input(panel: JPanel, inputs: Map<String, List<Int>>) {
@@ -60,8 +74,7 @@ class Input(panel: JPanel, inputs: Map<String, List<Int>>) {
     }
 }
 
-class Game : JPanel() {
-    val gameLoop = Timer(1000 / TARGET_FPS, { update() })
+class Game : JPanel(), Runnable {
     val input =
             Input(
                     this,
@@ -75,7 +88,61 @@ class Game : JPanel() {
                     )
             )
 
+    val points =
+            listOf(
+                    // Front
+                    Vec3(0.25, 0.25, 0.25),
+                    Vec3(-0.25, 0.25, 0.25),
+                    Vec3(-0.25, -0.25, 0.25),
+                    Vec3(0.25, -0.25, 0.25),
+
+                    // Back
+                    Vec3(0.25, 0.25, -0.25),
+                    Vec3(-0.25, 0.25, -0.25),
+                    Vec3(-0.25, -0.25, -0.25),
+                    Vec3(0.25, -0.25, -0.25),
+            )
+    val faces =
+            listOf(
+                    listOf(0, 1, 2, 3),
+                    listOf(4, 5, 6, 7),
+                    listOf(0, 4),
+                    listOf(1, 5),
+                    listOf(2, 6),
+                    listOf(3, 7),
+            )
+
+    var zOffset = 1.0
+    var angle = 0.0
+
+    var dt = 0.0
+    var gameThread: Thread
+
+    override fun run() {
+        var nsPerFrame = 1_000_000_000.0 / TARGET_FPS
+        var lastTime = System.nanoTime()
+        dt = 0.0
+
+        while (true) {
+            val now = System.nanoTime()
+            dt += (now - lastTime) / nsPerFrame
+            lastTime = now
+
+            while (dt >= 1) {
+                update()
+                dt--
+            }
+
+            repaint()
+
+            Thread.sleep(1)
+        }
+    }
+
     fun update() {
+        zOffset += dt * 0.0
+        angle += PI * dt * 0.001
+
         if (input.isPressed("escape")) {
             System.exit(0)
         }
@@ -99,17 +166,90 @@ class Game : JPanel() {
         if (input.isPressed("space")) {
             println("space")
         }
+    }
 
-        repaint()
+    fun point(g: Graphics, vec: Vec2) {
+        val SIZE = 10
+        val HSIZE = SIZE / 2
+        val COLOR = Color.GREEN
+
+        g.color = COLOR
+        g.fillOval(vec.x.toInt() - HSIZE, vec.y.toInt() - HSIZE, SIZE, SIZE)
+    }
+
+    fun line(g: Graphics, v1: Vec2, v2: Vec2) {
+        val SIZE = 10
+        val HSIZE = SIZE / 2
+        val COLOR = Color.GREEN
+
+        g.color = COLOR
+        g.drawLine(
+                v1.x.toInt() - HSIZE,
+                v1.y.toInt() - HSIZE,
+                v2.x.toInt() - HSIZE,
+                v2.y.toInt() - HSIZE
+        )
+    }
+
+    fun screen(vec: Vec3, out: Vec2) {
+        // Optimize like the video
+        out.x = vec.x * WIN_WIDTH / 2.0 + WIN_WIDTH / 2.0
+        out.y = vec.y * -1.0 * WIN_HEIGHT / 2.0 + WIN_HEIGHT / 2.0
+    }
+
+    fun project(vec: Vec3, distance: Double) {
+        val z = vec.z + distance
+        vec.x = vec.x / z
+        vec.y = vec.y / z
+    }
+
+    fun rotate_xz(vec: Vec3, angle: Double) {
+        vec.x = vec.x * cos(angle) - vec.z * sin(angle)
+        vec.z = vec.x * sin(angle) + vec.z * cos(angle)
     }
 
     override fun paintComponent(g: Graphics) {
         super.paintComponent(g)
+
+        var inp1 = Vec3(0.0, 0.0, 0.0)
+        var out1 = Vec2(0.0, 0.0)
+
+        var inp2 = Vec3(0.0, 0.0, 0.0)
+        var out2 = Vec2(0.0, 0.0)
+
+        faces.forEach { face ->
+            face.forEachIndexed { i, _ ->
+                val v1 = points[face[i]]
+                inp1.x = v1.x
+                inp1.y = v1.y
+                inp1.z = v1.z
+
+                rotate_xz(inp1, angle)
+                project(inp1, zOffset)
+                screen(inp1, out1)
+
+                // point(g, out1)
+
+                val v2 = points[face[(i + 1) % face.size]]
+                inp2.x = v2.x
+                inp2.y = v2.y
+                inp2.z = v2.z
+
+                rotate_xz(inp2, angle)
+                project(inp2, zOffset)
+                screen(inp2, out2)
+
+                line(g, out1, out2)
+            }
+        }
+
+        Toolkit.getDefaultToolkit().sync()
     }
 
     init {
         this.background = Color.BLACK
-        gameLoop.start()
+        gameThread = Thread(this)
+        gameThread.start()
     }
 }
 
