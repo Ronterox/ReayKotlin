@@ -79,10 +79,14 @@ class Game : JPanel(), Runnable {
             Input(
                     this,
                     mapOf(
-                            "up" to listOf(KeyEvent.VK_UP, KeyEvent.VK_W),
-                            "down" to listOf(KeyEvent.VK_DOWN, KeyEvent.VK_S),
-                            "left" to listOf(KeyEvent.VK_LEFT, KeyEvent.VK_A),
-                            "right" to listOf(KeyEvent.VK_RIGHT, KeyEvent.VK_D),
+                            "up" to listOf(KeyEvent.VK_W),
+                            "look_up" to listOf(KeyEvent.VK_UP),
+                            "down" to listOf(KeyEvent.VK_S),
+                            "look_down" to listOf(KeyEvent.VK_DOWN),
+                            "left" to listOf(KeyEvent.VK_A),
+                            "look_left" to listOf(KeyEvent.VK_LEFT),
+                            "right" to listOf(KeyEvent.VK_D),
+                            "look_right" to listOf(KeyEvent.VK_RIGHT),
                             "escape" to listOf(KeyEvent.VK_ESCAPE),
                             "space" to listOf(KeyEvent.VK_SPACE),
                     )
@@ -112,7 +116,7 @@ class Game : JPanel(), Runnable {
                     listOf(3, 7),
             )
 
-    var offset = Vec3(0.0, 0.0, 0.0)
+    var offset = Vec3(0.0, 0.0, 1.0)
     var angle = 0.0
 
     var dt = 0.0
@@ -156,12 +160,24 @@ class Game : JPanel(), Runnable {
             offset.x -= dt * 0.01
         }
 
-        if (input.isPressed("right")) {
-            offset.x += dt * 0.01
+        if (input.isPressed("look_right")) {
+            angle += PI * dt * 0.01
         }
 
-        if (input.isPressed("space")) {
-            angle += PI * dt * 0.01
+        if (input.isPressed("look_left")) {
+            angle -= PI * dt * 0.01
+        }
+
+        if (input.isPressed("look_up")) {
+            offset.y += dt * 0.01
+        }
+
+        if (input.isPressed("look_down")) {
+            offset.y -= dt * 0.01
+        }
+
+        if (input.isPressed("right")) {
+            offset.x += dt * 0.01
         }
     }
 
