@@ -110,10 +110,11 @@ class Game : JPanel(), Runnable {
             listOf(
                     listOf(0, 1, 2, 3),
                     listOf(4, 5, 6, 7),
-                    listOf(0, 4),
-                    listOf(1, 5),
-                    listOf(2, 6),
-                    listOf(3, 7),
+                    // Connection faces
+                    listOf(0, 4, 5, 1),
+                    listOf(1, 5, 6, 2),
+                    listOf(2, 6, 7, 3),
+                    listOf(3, 7, 4, 0),
             )
 
     var offset = Vec3(0.0, 0.0, 1.0)
@@ -204,6 +205,45 @@ class Game : JPanel(), Runnable {
         )
     }
 
+    fun fillFaceManually(g: Graphics, projectedPoints: List<Vec2>, color: Color) {
+        // Limits of drawings
+        val minY = projectedPoints.minOf { it.y }.toInt()
+        val maxY = projectedPoints.maxOf { it.y }.toInt()
+
+        g.color = color
+
+        // Horizontal scanlines
+        for (y in minY..maxY) {
+            val intersections = mutableListOf<Double>()
+
+            // Find where the scanline crosses each edge
+            for (i in projectedPoints.indices) {
+                val p1 = projectedPoints[i]
+                val p2 = projectedPoints[(i + 1) % projectedPoints.size]
+
+                // TODO: Learn where does this condition / formula come from
+                // Check if the scanline 'y' is between the two vertices
+                if ((p1.y <= y && p2.y > y) || (p2.y <= y && p1.y > y)) {
+                    // Calculate X coordinate using linear interpolation
+                    // Formula: x = x1 + (y - y1) * (x2 - x1) / (y2 - y1)
+                    val intersectX = p1.x + (y - p1.y) * (p2.x - p1.x) / (p2.y - p1.y)
+                    intersections.add(intersectX)
+                }
+            }
+
+            // TODO: Understand why this helps
+            // Sort intersections from left to right
+            intersections.sort()
+
+            // Fill pixels between pairs of intersections
+            for (i in 0 until intersections.size - 1 step 2) {
+                val startX = intersections[i].toInt()
+                val endX = intersections[i + 1].toInt()
+                g.drawLine(startX, y, endX, y)
+            }
+        }
+    }
+
     fun screen(vec: Vec3, out: Vec2) {
         out.x = (vec.x + 1) / 2.0 * WIN_WIDTH
         out.y = (1 - (vec.y + 1) / 2.0) * WIN_HEIGHT
@@ -227,35 +267,29 @@ class Game : JPanel(), Runnable {
     override fun paintComponent(g: Graphics) {
         super.paintComponent(g)
 
-        var inp1 = Vec3(0.0, 0.0, 0.0)
-        var out1 = Vec2(0.0, 0.0)
-
-        var inp2 = Vec3(0.0, 0.0, 0.0)
-        var out2 = Vec2(0.0, 0.0)
+        var inp = Vec3(0.0, 0.0, 0.0)
 
         faces.forEach { face ->
+            val facePoints = mutableListOf<Vec2>()
+
             face.forEachIndexed { i, _ ->
+                val out = Vec2(0.0, 0.0)
                 val v1 = points[face[i]]
-                inp1.x = v1.x
-                inp1.y = v1.y
-                inp1.z = v1.z
+                inp.x = v1.x
+                inp.y = v1.y
+                inp.z = v1.z
 
-                rotate_xz(inp1, angle)
-                project(inp1, offset)
-                screen(inp1, out1)
+                rotate_xz(inp, angle)
+                project(inp, offset)
+                screen(inp, out)
 
-                // point(g, out1)
+                facePoints.add(out)
+            }
 
-                val v2 = points[face[(i + 1) % face.size]]
-                inp2.x = v2.x
-                inp2.y = v2.y
-                inp2.z = v2.z
+            // fillFaceManually(g, facePoints, Color.GREEN)
 
-                rotate_xz(inp2, angle)
-                project(inp2, offset)
-                screen(inp2, out2)
-
-                line(g, out1, out2)
+            for (i in facePoints.indices) {
+                line(g, facePoints[i], facePoints[(i + 1) % facePoints.size])
             }
         }
 
